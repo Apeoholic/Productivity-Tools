@@ -16,6 +16,7 @@ using System.Globalization;
 using System.Net;
 using System.Text.RegularExpressions;
 using HtmlAgilityPack;
+using System.IO;
 
 namespace OnenoteMarkdownConverter
 {
@@ -272,10 +273,29 @@ namespace OnenoteMarkdownConverter
             }
         }
 
+        string imageFolder = "";
+        string postFolder = "";
+
         private void HandleImage(HtmlNode node, bool isOpen)
         {
             if (node.Name == "img")
             {
+                if(string.IsNullOrEmpty(imageFolder))
+                {
+                    var dialog = new System.Windows.Forms.FolderBrowserDialog();
+                    dialog.Description = "Please select where you want the images to be saved";
+                    System.Windows.Forms.DialogResult result = dialog.ShowDialog();
+                    imageFolder = dialog.SelectedPath;
+                }
+
+                if (string.IsNullOrEmpty(postFolder))
+                {
+                    var dialog = new System.Windows.Forms.FolderBrowserDialog();
+                    dialog.SelectedPath = imageFolder;
+                    dialog.Description = "Please select where you want your post to be saved";
+                    System.Windows.Forms.DialogResult result = dialog.ShowDialog();
+                    postFolder = dialog.SelectedPath;
+                }
                 var src = node.GetAttributeValue("src", null);
                 if (src != null)
                 {
@@ -284,11 +304,24 @@ namespace OnenoteMarkdownConverter
                         String name;
                         if (src.StartsWith("file:"))
                         {
+                            name = Path.GetFileName(src);
+                            //Save file locally
+                            var image = File.ReadAllBytes(src.Replace("file:///", ""));
+                            string tempname = Path.GetRandomFileName() + Path.GetExtension(name);
+                            File.WriteAllBytes(imageFolder + "\\" + tempname, image);
+                            //src = "data:image/png;base64," + Convert.ToBase64String(image);
+                            
                             name = System.IO.Path.GetFileName(src);
-                            src = "LOCAL_FILE_PATH/" + name;
-                        }
+                            var uri = new Uri(postFolder + "\\myfile.txt");
+                            var result = uri.MakeRelativeUri(new Uri(imageFolder + "\\" + tempname)).ToString();
+                            src = result;
+                        }//
                         else
                         {
+                           
+
+
+
                             var uri = new Uri(src);
                             name = uri.Segments[uri.Segments.Length - 1];
                         }
